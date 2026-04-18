@@ -25,11 +25,16 @@ export default function MediaVault() {
 
   // Flatten all media across all students into one array
   const allMedia = Object.entries(mediaWallet).flatMap(([studentId, items]) =>
-    items.map(item => ({
-      ...item,
-      studentId,
-      uploaderName: students.find(s => s.id === studentId)?.name || 'Unknown',
-    }))
+    items.map(item => {
+      const { caption: rawCaption, tag } = parseCaption(item.caption);
+      return {
+        ...item,
+        caption: rawCaption,
+        tag,
+        studentId,
+        uploaderName: students.find(s => s.id === studentId)?.name || 'Unknown',
+      };
+    })
   ).sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
 
   const filtered = activeTab === 'All'
