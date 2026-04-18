@@ -11,6 +11,32 @@ const COLL_VAULTS = 'vaults';
 const CLOUDINARY_CLOUD_NAME    = 'dirlbqjpb';
 const CLOUDINARY_UPLOAD_PRESET = 'classvault';
 
+// ⚠️ Replace with your actual Cloudinary API Key & Secret from your dashboard
+const CLOUDINARY_API_KEY = '987864278699132';
+const CLOUDINARY_API_SECRET = 'SjTquBPwMIBiFl9YNgtVjUf10Qw';
+
+// Helper to delete from Cloudinary
+export async function deleteFromCloudinary(publicId) {
+  if (!publicId) return;
+  try {
+    const timestamp = Math.floor(Date.now() / 1000);
+    const str = `public_id=${publicId}&timestamp=${timestamp}${CLOUDINARY_API_SECRET}`;
+    
+    // Generate SHA-1 signature (Cloudinary requirement)
+    const buffer = new TextEncoder().encode(str);
+    const hashBuffer = await crypto.subtle.digest('SHA-1', buffer);
+    const signature = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+    const fd = new FormData();
+    fd.append('public_id', publicId);
+    fd.append('timestamp', timestamp);
+    fd.append('api_key', CLOUDINARY_API_KEY);
+    fd.append('signature', signature);
+
+    await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/destroy`, { method: 'POST', body: fd });
+  } catch (err) { console.error('Cloudinary delete failed:', err); }
+}
+
 export async function uploadToCloudinary(file) {
   let uploadFile = file;
   try {
@@ -26,7 +52,7 @@ export async function uploadToCloudinary(file) {
   );
   if (!res.ok) throw new Error(`Cloudinary error ${res.status}`);
   const data = await res.json();
-  return data.secure_url;
+  return { url: data.secure_url, publicId: data.public_id };
 }
 
 export function AppProvider({ children }) {
@@ -83,6 +109,10 @@ export function AppProvider({ children }) {
   const deleteMemory = useCallback(async (vaultId, memoryId) => {
     const vault = vaults.find(v => v.id === vaultId);
     if (!vault) return;
+    const memToDelete = (vault.memories || []).find(m => m.id === memoryId);
+    if (memToDelete?.publicId) {
+      deleteFromCloudinary(memToDelete.publicId);
+    }
     const updated = (vault.memories || []).filter(m => m.id !== memoryId);
     try {
       await updateDoc(doc(db, COLL_VAULTS, vaultId), { memories: updated });

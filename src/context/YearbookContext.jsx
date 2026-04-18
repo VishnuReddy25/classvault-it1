@@ -5,6 +5,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { IT1_STUDENTS } from '../data/it1Students';
+import { deleteFromCloudinary } from './AppContext';
 
 const YearbookContext = createContext(null);
 
@@ -173,11 +174,13 @@ export function YearbookProvider({ children }) {
 
       const data = await res.json();
       const imageUrl = data.secure_url;
+      const publicId = data.public_id;
 
       // Save URL to Firestore
       const docRef = await addDoc(collection(db, COLL_MEDIA), {
         studentId,
         url: imageUrl,
+        publicId,
         caption,
         uploadedAt: new Date().toISOString(),
       });
@@ -191,6 +194,10 @@ export function YearbookProvider({ children }) {
 
   const deleteMedia = useCallback(async (studentId, mediaId) => {
     try {
+      const docSnap = await getDoc(doc(db, COLL_MEDIA, mediaId));
+      if (docSnap.exists() && docSnap.data().publicId) {
+        await deleteFromCloudinary(docSnap.data().publicId);
+      }
       await deleteDoc(doc(db, COLL_MEDIA, mediaId));
     } catch (e) {
       console.error('Failed to delete media:', e);

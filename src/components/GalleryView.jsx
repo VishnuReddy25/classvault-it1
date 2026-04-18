@@ -24,6 +24,7 @@ export default function GalleryView({ vault }) {
       addMemory(vault.id, {
         emoji:    '🖼',
         photoUrl: r.photoUrl,   // ← Cloudinary permanent URL
+        publicId: r.publicId,   // ← Needed to delete from Cloudinary
         caption:  CAPTIONS[Math.floor(Math.random() * CAPTIONS.length)],
         uploader: userName,
         date:     new Date().toISOString().slice(0, 10),

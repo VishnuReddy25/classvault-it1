@@ -19,8 +19,8 @@ export default function UploadZone({ onUpload, locked }) {
     for (let i = 0; i < arr.length; i++) {
       const file = arr[i];
       try {
-        const url = await uploadToCloudinary(file);
-        results.push({ photoUrl: url, originalName: file.name });
+        const { url, publicId } = await uploadToCloudinary(file);
+        results.push({ photoUrl: url, publicId, originalName: file.name });
         setStatus(`Uploading ${i + 1} / ${arr.length}…`);
       } catch (err) {
         console.error('Cloudinary upload failed:', file.name, err);
