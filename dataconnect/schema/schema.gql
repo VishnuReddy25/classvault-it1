@@ -1,0 +1,46 @@
+type Student @table {
+  studentId: String!
+  firstName: String!
+  lastName: String!
+  email: String!
+  pin: String!
+  createdAt: Timestamp!
+  photoUrl: String
+  bio: String
+  contactInfo: String
+}
+
+type Profile @table {
+  student: Student!
+  displayName: String!
+  createdAt: Timestamp!
+  updatedAt: Timestamp!
+  photoUrl: String
+  quote: String
+  aspirations: String
+  favoriteMemory: String
+}
+
+type Memory @table {
+  student: Student!
+  type: String!
+  createdAt: Timestamp!
+  caption: String
+  photoUrl: String
+  textContent: String
+}
+
+type Signature @table {
+  signer: Student!
+  recipient: Student!
+  message: String!
+  createdAt: Timestamp!
+}
+
+type Event @table {
+  title: String!
+  eventDate: Date!
+  createdAt: Timestamp!
+  description: String
+  location: String
+}
