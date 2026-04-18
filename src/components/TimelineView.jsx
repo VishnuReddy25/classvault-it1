@@ -66,7 +66,8 @@ export default function TimelineView({ vault }) {
 }
 
 function TimelineCard({ memory: m, index }) {
-  const grad = m.dataUrl ? null : MEMORY_GRADIENTS[index % MEMORY_GRADIENTS.length];
+  const imgSrc = m.photoUrl || m.dataUrl;
+  const grad = imgSrc ? null : MEMORY_GRADIENTS[index % MEMORY_GRADIENTS.length];
   const activeReactions = REACTION_KEYS.filter(r => m.reactions[r.key] > 0);
 
   return (
@@ -83,8 +84,8 @@ function TimelineCard({ memory: m, index }) {
       }}
     >
       {/* Image */}
-      {m.dataUrl ? (
-        <img src={m.dataUrl} alt={m.caption} style={{ width:'100%', maxHeight:240, objectFit:'cover', display:'block' }} />
+      {imgSrc ? (
+        <img src={imgSrc} alt={m.caption} style={{ width:'100%', maxHeight:240, objectFit:'cover', display:'block' }} />
       ) : (
         <div style={{ height:200, background:grad, display:'flex', alignItems:'center', justifyContent:'center', fontSize:52 }}>
           {m.emoji}

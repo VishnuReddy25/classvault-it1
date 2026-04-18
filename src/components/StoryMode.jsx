@@ -58,7 +58,8 @@ export default function StoryMode({ memories, onClose }) {
 
   if (!current) return null;
 
-  const grad = current.dataUrl ? null : MEMORY_GRADIENTS[idx % MEMORY_GRADIENTS.length];
+  const imgSrc = current.photoUrl || current.dataUrl;
+  const grad = imgSrc ? null : MEMORY_GRADIENTS[idx % MEMORY_GRADIENTS.length];
 
   return (
     <div
@@ -113,9 +114,9 @@ export default function StoryMode({ memories, onClose }) {
         style={{ textAlign: 'center', padding: '0 20px', maxWidth: 640, width: '100%' }}
       >
         {/* Image / emoji */}
-        {current.dataUrl ? (
+        {imgSrc ? (
           <img
-            src={current.dataUrl}
+            src={imgSrc}
             alt={current.caption}
             style={{
               width: '100%', maxHeight: '62vh', objectFit: 'contain',

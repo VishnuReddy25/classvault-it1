@@ -75,7 +75,12 @@ export default function Dashboard() {
       ) : (
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))', gap:18 }}>
           {vaults.map((v, i) => (
-            <VaultCard key={v.id} vault={v} onClick={() => enterVault(v.id)} delay={i * 0.07} />
+            <VaultCard
+              key={v.id} vault={v}
+              onClick={() => enterVault(v.id)}
+              delay={i * 0.07}
+              currentUser={sessionStudent?.name}
+            />
           ))}
           <CreateCard onClick={() => setShowCreate(true)} />
         </div>
@@ -86,8 +91,23 @@ export default function Dashboard() {
   );
 }
 
-function VaultCard({ vault: v, onClick, delay }) {
+function VaultCard({ vault: v, onClick, delay, currentUser }) {
+  const { deleteVault } = useApp();
+  const { isAdmin } = useYearbook();
+  const [confirmDel, setConfirmDel] = useState(false);
+
+  // First memberName is always the creator
+  const isCreator = v.memberNames?.[0] === currentUser;
+  const canDelete  = isCreator || isAdmin;
+
   const coverGrad = v.locked ? COVER_GRADIENTS.Locked : (COVER_GRADIENTS[v.theme] || COVER_GRADIENTS.Other);
+
+  const handleDelete = (e) => {
+    e.stopPropagation();
+    if (!confirmDel) { setConfirmDel(true); return; }
+    deleteVault(v.id);
+  };
+
   return (
     <div
       className="fade-up"
@@ -98,21 +118,46 @@ function VaultCard({ vault: v, onClick, delay }) {
         boxShadow:'0 4px 20px rgba(108,71,255,0.07)',
         cursor:'pointer', animationDelay:`${delay}s`,
         transition:'transform 0.2s, box-shadow 0.2s',
+        position:'relative',
       }}
-      onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-4px)';e.currentTarget.style.boxShadow='0 12px 32px rgba(108,71,255,0.15)';}}
-      onMouseLeave={e=>{e.currentTarget.style.transform='';e.currentTarget.style.boxShadow='0 4px 20px rgba(108,71,255,0.07)';}}
+      onMouseEnter={e => { e.currentTarget.style.transform='translateY(-4px)'; e.currentTarget.style.boxShadow='0 12px 32px rgba(108,71,255,0.15)'; }}
+      onMouseLeave={e => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 4px 20px rgba(108,71,255,0.07)'; setConfirmDel(false); }}
     >
+      {/* Cover */}
       <div style={{ height:154, position:'relative', overflow:'hidden', background:coverGrad, display:'flex', alignItems:'center', justifyContent:'center', fontSize:56 }}>
         <span>{v.locked ? '🔒' : v.emoji}</span>
+
+        {/* Privacy pill */}
         <div style={{
           position:'absolute', top:10, right:10,
-          background: v.locked?'rgba(245,158,11,0.75)':v.privacy==='public'?'rgba(20,184,166,0.75)':'rgba(0,0,0,0.45)',
+          background: v.locked ? 'rgba(245,158,11,0.75)' : v.privacy==='public' ? 'rgba(20,184,166,0.75)' : 'rgba(0,0,0,0.45)',
           backdropFilter:'blur(10px)', color:'#fff', fontSize:10, fontWeight:500,
           padding:'4px 11px', borderRadius:100, display:'flex', alignItems:'center', gap:5,
         }}>
           {v.locked ? '🔒 Sealed' : `${PRIVACY_ICONS[v.privacy]||'🌐'} ${v.privacy==='password'?'Password':v.privacy==='invite'?'Invite only':'Public'}`}
         </div>
+
+        {/* Delete button — only for creator/admin */}
+        {canDelete && (
+          <button
+            onClick={handleDelete}
+            title={confirmDel ? 'Click again to confirm delete' : 'Delete vault'}
+            style={{
+              position:'absolute', top:10, left:10,
+              padding:'4px 12px', borderRadius:100, fontSize:11, fontWeight:600,
+              background: confirmDel ? '#ef4444' : 'rgba(239,68,68,0.8)',
+              border:'none', color:'#fff', cursor:'pointer',
+              backdropFilter:'blur(8px)',
+              transition:'all 0.18s',
+              boxShadow:'0 2px 8px rgba(0,0,0,0.3)',
+            }}
+          >
+            {confirmDel ? '✓ Confirm' : '🗑 Delete'}
+          </button>
+        )}
       </div>
+
+      {/* Body */}
       <div style={{ padding:'16px 18px' }}>
         <div style={{ fontFamily:"'Fraunces',serif", fontSize:17, fontWeight:600, color:'#0d0b18', marginBottom:10 }}>{v.name}</div>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
@@ -121,8 +166,15 @@ function VaultCard({ vault: v, onClick, delay }) {
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:'#0f6e56', fontWeight:500, background:'rgba(20,184,166,0.07)', border:'1px solid rgba(20,184,166,0.2)', padding:'3px 10px', borderRadius:100, width:'fit-content' }}>
           <span>🔐</span>
-          {v.locked ? 'Time capsule · Sealed' : 'Private vault · Members only'}
+          {/* {v.locked ? 'Time capsule · Sealed' : 'Private vault · Members only'} */}
         </div>
+
+        {/* Creator badge */}
+        {isCreator && (
+          <div style={{ marginTop:8, fontSize:10, color:'#7c3aed', fontWeight:600, opacity:0.7 }}>
+            ✦ You created this vault
+          </div>
+        )}
       </div>
     </div>
   );
@@ -138,10 +190,10 @@ function CreateCard({ onClick }) {
         gap:10, minHeight:220, cursor:'pointer', background:'rgba(108,71,255,0.025)',
         transition:'all 0.22s',
       }}
-      onMouseEnter={e=>{e.currentTarget.style.borderColor='#6c47ff';e.currentTarget.style.background='rgba(108,71,255,0.07)';e.currentTarget.style.transform='translateY(-4px)';}}
-      onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(108,71,255,0.25)';e.currentTarget.style.background='rgba(108,71,255,0.025)';e.currentTarget.style.transform='';}}
+      onMouseEnter={e => { e.currentTarget.style.borderColor='#6c47ff'; e.currentTarget.style.background='rgba(108,71,255,0.07)'; e.currentTarget.style.transform='translateY(-4px)'; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor='rgba(108,71,255,0.25)'; e.currentTarget.style.background='rgba(108,71,255,0.025)'; e.currentTarget.style.transform=''; }}
     >
-      <div style={{ width:52,height:52,borderRadius:'50%',background:'rgba(108,71,255,0.1)',border:'1.5px solid rgba(108,71,255,0.25)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,color:'#6c47ff' }}>+</div>
+      <div style={{ width:52, height:52, borderRadius:'50%', background:'rgba(108,71,255,0.1)', border:'1.5px solid rgba(108,71,255,0.25)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, color:'#6c47ff' }}>+</div>
       <div style={{ fontSize:14, fontWeight:500, color:'#6c47ff' }}>Create new vault</div>
     </div>
   );

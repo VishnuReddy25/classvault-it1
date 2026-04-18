@@ -1,42 +1,41 @@
 import React, { useState, useRef } from 'react';
-import { compressImage, fileToDataURL } from '../utils/helpers';
+import { uploadToCloudinary } from '../context/AppContext';
 
 export default function UploadZone({ onUpload, locked }) {
-  const [drag, setDrag]         = useState(false);
-  const [compressing, setComp]  = useState(false);
-  const [saved, setSaved]       = useState(null);
-  const inputRef                = useRef();
+  const [drag,      setDrag]     = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [status,    setStatus]   = useState('');
+  const inputRef = useRef();
 
   if (locked) return null;
 
   const handleFiles = async (files) => {
     if (!files || !files.length) return;
-    setComp(true); setSaved(null);
+    const arr = Array.from(files).slice(0, 5);
+    setUploading(true);
+    setStatus(`Uploading 0 / ${arr.length}…`);
 
     const results = [];
-    for (const file of Array.from(files).slice(0, 5)) {
+    for (let i = 0; i < arr.length; i++) {
+      const file = arr[i];
       try {
-        const { file: compressed, savedPct } = await compressImage(file);
-        const dataUrl = await fileToDataURL(compressed);
-        results.push({ file: compressed, dataUrl, savedPct, originalName: file.name });
-      } catch {
-        // Fallback if compression fails
-        const dataUrl = await fileToDataURL(file);
-        results.push({ file, dataUrl, savedPct: 0, originalName: file.name });
+        const url = await uploadToCloudinary(file);
+        results.push({ photoUrl: url, originalName: file.name });
+        setStatus(`Uploading ${i + 1} / ${arr.length}…`);
+      } catch (err) {
+        console.error('Cloudinary upload failed:', file.name, err);
+        setStatus(`⚠ Failed: ${file.name}`);
       }
     }
 
-    const avgSaved = Math.round(results.reduce((s, r) => s + r.savedPct, 0) / results.length);
-    setComp(false);
-    setSaved(avgSaved);
-    onUpload(results);
-    setTimeout(() => setSaved(null), 4500);
+    setUploading(false);
+    setStatus('');
+    if (results.length > 0) onUpload(results);
   };
 
   return (
     <div style={{ marginBottom: 28 }}>
-      {/* Compression feedback */}
-      {compressing && (
+      {uploading && (
         <div className="pop-in" style={{
           display:'flex', alignItems:'center', gap:10,
           background:'rgba(108,71,255,0.07)', border:'1px solid rgba(108,71,255,0.2)',
@@ -44,29 +43,20 @@ export default function UploadZone({ onUpload, locked }) {
           padding:'10px 18px', borderRadius:100, marginBottom:12, width:'fit-content',
         }}>
           <span className="spinner" />
-          Optimizing — resizing to 1920px · converting to WebP...
-        </div>
-      )}
-      {saved !== null && !compressing && (
-        <div className="pop-in" style={{
-          display:'flex', alignItems:'center', gap:8,
-          background:'rgba(20,184,166,0.08)', border:'1px solid rgba(20,184,166,0.25)',
-          color:'#0f6e56', fontSize:13, fontWeight:500,
-          padding:'10px 18px', borderRadius:100, marginBottom:12, width:'fit-content',
-        }}>
-          ✓ Saved {saved}% space — compressed copy uploaded only
+          {status || 'Uploading to Cloudinary…'}
         </div>
       )}
 
-      {/* Drop zone */}
       <div
         className={`upload-zone${drag ? ' drag' : ''}`}
         style={{
-          border: '2px dashed rgba(108,71,255,0.28)', borderRadius:24,
-          padding:36, textAlign:'center', cursor:'pointer',
-          background:'rgba(108,71,255,0.025)', position:'relative', overflow:'hidden',
+          border:'2px dashed rgba(108,71,255,0.28)', borderRadius:24,
+          padding:36, textAlign:'center',
+          cursor: uploading ? 'wait' : 'pointer',
+          background:'rgba(108,71,255,0.025)',
+          opacity: uploading ? 0.7 : 1,
         }}
-        onClick={() => inputRef.current?.click()}
+        onClick={() => !uploading && inputRef.current?.click()}
         onDragOver={e => { e.preventDefault(); setDrag(true); }}
         onDragLeave={() => setDrag(false)}
         onDrop={e => { e.preventDefault(); setDrag(false); handleFiles(e.dataTransfer.files); }}
@@ -77,13 +67,13 @@ export default function UploadZone({ onUpload, locked }) {
           border:'1.5px solid rgba(108,71,255,0.25)',
           display:'flex', alignItems:'center', justifyContent:'center', fontSize:26,
         }}>
-          📸
+          {uploading ? '⏳' : '📸'}
         </div>
         <div style={{ fontSize:15, fontWeight:500, color:'#2d2a45', marginBottom:5 }}>
-          {drag ? 'Drop to upload!' : 'Drop photos here or click to upload'}
+          {uploading ? status : drag ? 'Drop to upload!' : 'Drop photos here or click to upload'}
         </div>
         <div style={{ fontSize:12, color:'#7b78a0' }}>
-          Auto-compressed · WebP · Max 1920px · ~300–700 KB
+          Uploaded to Cloudinary · Max 5 photos · Auto-compressed
         </div>
       </div>
 
@@ -93,7 +83,7 @@ export default function UploadZone({ onUpload, locked }) {
         multiple
         accept="image/*"
         style={{ display:'none' }}
-        onChange={e => handleFiles(e.target.files)}
+        onChange={e => { handleFiles(e.target.files); e.target.value = ''; }}
       />
     </div>
   );

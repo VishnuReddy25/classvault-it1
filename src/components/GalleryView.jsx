@@ -1,33 +1,35 @@
-import { useYearbook } from "../context/YearbookContext";
 import React from 'react';
 import Masonry from 'react-masonry-css';
 import MemoryCard from './MemoryCard';
 import UploadZone from './UploadZone';
 import { useApp } from '../context/AppContext';
-import { MEMORY_GRADIENTS } from '../data/sampleData';
+import { useYearbook } from '../context/YearbookContext';
 
 const BREAKPOINTS = { default: 3, 900: 2, 500: 1 };
+
+const CAPTIONS = [
+  'What a moment ✨','Golden hour magic','Forever in my heart',
+  'Vibes only 🌊','Pure joy','This view though',
+  'No caption needed','Core memory unlocked',
+];
 
 export default function GalleryView({ vault }) {
   const { addMemory } = useApp();
   const { sessionStudent } = useYearbook();
-  const userName = sessionStudent?.name || "Anonymous";
+  const userName = sessionStudent?.name || 'Anonymous';
 
+  // results = [{ photoUrl, originalName }] — Cloudinary URLs from UploadZone
   const handleUpload = (results) => {
-    const captions = ['What a moment ✨','Golden hour magic','Forever in my heart','Vibes only 🌊','Pure joy','This view though','No caption needed','Core memory unlocked'];
     results.forEach((r, i) => {
       addMemory(vault.id, {
-        id: Date.now() + i,
-        emoji: '🖼',
-        dataUrl: r.dataUrl,
-        caption: captions[Math.floor(Math.random() * captions.length)],
+        emoji:    '🖼',
+        photoUrl: r.photoUrl,   // ← Cloudinary permanent URL
+        caption:  CAPTIONS[Math.floor(Math.random() * CAPTIONS.length)],
         uploader: userName,
-        date: new Date().toISOString().slice(0, 10),
-        height: 160 + Math.floor(Math.random() * 80),
+        date:     new Date().toISOString().slice(0, 10),
+        height:   160 + Math.floor(Math.random() * 80),
         reactions: { heart: 0, laugh: 0, fire: 0, wow: 0 },
-        comments: [],
-        compressed: true,
-        savedPct: r.savedPct,
+        comments:  [],
       });
     });
   };
@@ -36,7 +38,7 @@ export default function GalleryView({ vault }) {
     <div>
       <UploadZone onUpload={handleUpload} locked={vault.locked} />
 
-      {vault.memories.length === 0 ? (
+      {(vault.memories || []).length === 0 ? (
         <EmptyGallery />
       ) : (
         <Masonry
@@ -44,7 +46,7 @@ export default function GalleryView({ vault }) {
           className="masonry-grid"
           columnClassName="masonry-column"
         >
-          {vault.memories.map((m, i) => (
+          {(vault.memories || []).map((m, i) => (
             <MemoryCard key={m.id} memory={m} vaultId={vault.id} index={i} />
           ))}
         </Masonry>
