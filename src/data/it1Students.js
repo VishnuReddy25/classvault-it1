@@ -17,6 +17,15 @@ export const SUPERLATIVE_OPTIONS = [
   'The Mentor',
   'Most Likely to Write a Book',
   'The Innovator',
+  'Most Likely to Become a Professor',
+  'The Problem Solver',
+  'Most Likely to Invent Something',
+  'The Team Player',
+  'Most Likely to Travel the World',
+  'The Organizer',
+  'Most Likely to Make a Viral App',
+  'The Visionary',
+  'Most Likely to Succeed',
 ];
 
 export const ACCENT_COLORS = [

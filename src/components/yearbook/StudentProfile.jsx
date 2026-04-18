@@ -89,6 +89,150 @@ function UnlockGate({ student, onSuccess, onCancel }) {
   );
 }
 
+function DropdownOption({ label, active, muted, onClick, tv }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        padding: '10px 16px',
+        fontSize: 14,
+        cursor: 'pointer',
+        fontFamily: "'DM Sans',sans-serif",
+        color: active
+          ? '#a78bfa'
+          : muted
+            ? tv.muted.color
+            : (tv.inputText || tv.text),
+        background: active
+          ? 'rgba(124,58,237,0.15)'
+          : hovered
+            ? 'rgba(124,58,237,0.07)'
+            : 'transparent',
+        fontWeight: active ? 600 : 400,
+        transition: 'background 0.12s',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+      }}
+    >
+      {active && <span style={{ fontSize: 10, color: '#a78bfa' }}>✓</span>}
+      {label}
+    </div>
+  );
+}
+
+function SuperlativeDropdown({ value, customValue, onChange, onCustomChange, tv }) {
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef();
+
+  React.useEffect(() => {
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const displayLabel = value === 'Other'
+    ? '✏️ Other (write your own)'
+    : value || '— Pick a superlative —';
+
+  const isPlaceholder = !value;
+
+  return (
+    <div ref={dropdownRef} style={{ position: 'relative', marginTop: 14 }}>
+      {/* Trigger */}
+      <div
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: '100%',
+          padding: '12px 16px',
+          borderRadius: 14,
+          fontSize: 14,
+          background: tv.inputBg,
+          border: `1.5px solid ${open ? '#7c3aed' : tv.inputBorder}`,
+          color: isPlaceholder ? tv.muted.color : (tv.inputText || tv.text),
+          fontFamily: "'DM Sans',sans-serif",
+          cursor: 'pointer',
+          boxSizing: 'border-box',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          userSelect: 'none',
+          transition: 'border-color 0.2s',
+        }}
+      >
+        <span>{displayLabel}</span>
+        <span style={{
+          fontSize: 10,
+          opacity: 0.5,
+          transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+          transition: 'transform 0.2s',
+          display: 'inline-block',
+        }}>▼</span>
+      </div>
+
+      {/* Dropdown list */}
+      {open && (
+        <div style={{
+          position: 'absolute',
+          top: 'calc(100% + 6px)',
+          left: 0,
+          right: 0,
+          background: tv.modalBg,
+          border: `1.5px solid ${tv.inputBorder}`,
+          borderRadius: 14,
+          zIndex: 200,
+          maxHeight: 240,
+          overflowY: 'auto',
+          boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+        }}>
+          <DropdownOption
+            label="— Pick a superlative —"
+            active={!value}
+            muted
+            onClick={() => { onChange(''); setOpen(false); }}
+            tv={tv}
+          />
+          {SUPERLATIVE_OPTIONS.map(o => (
+            <DropdownOption
+              key={o}
+              label={o}
+              active={value === o}
+              onClick={() => { onChange(o); setOpen(false); }}
+              tv={tv}
+            />
+          ))}
+          {/* Divider before Other */}
+          <div style={{ height: 1, background: tv.inputBorder, margin: '4px 0' }} />
+          <DropdownOption
+            label="✏️ Other (write your own)"
+            active={value === 'Other'}
+            onClick={() => { onChange('Other'); setOpen(false); }}
+            tv={tv}
+          />
+        </div>
+      )}
+
+      {/* Custom text input shown when Other is selected */}
+      {value === 'Other' && (
+        <input
+          value={customValue || ''}
+          onChange={e => onCustomChange(e.target.value)}
+          placeholder="Type your own superlative…"
+          autoFocus
+          style={{ ...inp(tv), marginTop: 8 }}
+        />
+      )}
+    </div>
+  );
+}
+
 export default function StudentProfile({ studentId, themeVars: tv, onClose }) {
   const { students, updateStudent, uploadPhoto, isClaimed, sessionId, isAdmin } = useYearbook();
   const s = students.find(st => st.id === studentId);
@@ -132,6 +276,11 @@ export default function StudentProfile({ studentId, themeVars: tv, onClose }) {
 
   const D = editing ? draft : s;
 
+  // Resolve display superlative: if 'Other', show customSuperlative
+  const displaySuperlative = s.superlative === 'Other'
+    ? s.customSuperlative
+    : s.superlative;
+
   const editLabel = canDirectEdit
     ? '✏️ Edit Profile'
     : isUnclaimed ? '🔐 Claim & Edit' : '🔑 Unlock to Edit';
@@ -147,12 +296,12 @@ export default function StudentProfile({ studentId, themeVars: tv, onClose }) {
     <div
       onClick={e => { if (e.target===e.currentTarget && !editing) onClose(); }}
       style={{
-            position:'fixed',
-            top:80,
-            left:0,
-            right:0,
-            bottom:0,
-            zIndex:400,
+        position:'fixed',
+        top:80,
+        left:0,
+        right:0,
+        bottom:0,
+        zIndex:400,
         background:tv.overlay, backdropFilter:'blur(12px)',
         display:'flex', alignItems:'center', justifyContent:'center',
         padding:20, overflowY:'auto',
@@ -162,8 +311,6 @@ export default function StudentProfile({ studentId, themeVars: tv, onClose }) {
         width:'100%', maxWidth:680,
         background:tv.modalBg, border:`1px solid ${tv.modalBorder}`,
         borderRadius:28, boxShadow:'0 32px 80px rgba(0,0,0,0.5)',
-        /* ✅ FIX 1: removed overflow:'hidden' — was clipping the hero top
-           edge and the avatar circle that hangs below via translateY(50%) */
         maxHeight:'90vh',
         display:'flex', flexDirection:'column',
         position:'relative',
@@ -176,9 +323,6 @@ export default function StudentProfile({ studentId, themeVars: tv, onClose }) {
           height:180, position:'relative', flexShrink:0,
           background:D.gradient,
           display:'flex', alignItems:'flex-end', padding:'0 28px 0',
-          /* ✅ FIX 2: removed overflow:'hidden' so the avatar div using
-             translateY(50%) is no longer clipped by this container.
-             Border-radius applied only to top corners to preserve shape. */
           borderRadius:'28px 28px 0 0',
         }}>
           {D.photo && <img src={D.photo} alt="" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',opacity:0.4,borderRadius:'28px 28px 0 0'}} />}
@@ -188,10 +332,10 @@ export default function StudentProfile({ studentId, themeVars: tv, onClose }) {
             onClick={() => { cancelEdit(); onClose(); }}
             title="Close"
             style={{
-              position:'fixed',   // 🔥 KEY CHANGE
+              position:'fixed',
               top:20,
               right:20,
-              zIndex:9999,        // 🔥 Always on top
+              zIndex:9999,
               width:42,
               height:42,
               borderRadius:'50%',
@@ -220,7 +364,7 @@ export default function StudentProfile({ studentId, themeVars: tv, onClose }) {
             {isOwner ? '✓ Your Profile' : claimedBySomeone ? '🔒 Claimed' : '○ Unclaimed'}
           </div>
 
-          {/* Avatar — hangs below hero via translateY(50%) */}
+          {/* Avatar */}
           <div style={{ position:'relative', transform:'translateY(50%)', zIndex:5 }}>
             <div style={{
               width:92, height:92, borderRadius:'50%', background:D.gradient,
@@ -247,9 +391,7 @@ export default function StudentProfile({ studentId, themeVars: tv, onClose }) {
           </div>
         </div>
 
-        {/* Body — only this div scrolls */}
-        {/* ✅ FIX 3: padding-top 58px = half of 92px avatar (46px) + 12px gap
-            minHeight:0 is required for flex children to scroll correctly */}
+        {/* Body */}
         <div style={{ overflowY:'auto', flex:1, minHeight:0, borderRadius:'0 0 28px 28px' }}>
           <div style={{ padding:'58px 28px 0' }}>
 
@@ -261,18 +403,22 @@ export default function StudentProfile({ studentId, themeVars: tv, onClose }) {
               {s.roll} · IT-1 · Batch 2022–26
             </div>
 
+            {/* Superlative */}
             {editing ? (
-              <select value={draft.superlative||''} onChange={e=>setDraft(d=>({...d,superlative:e.target.value}))}
-                style={{...inp(tv),marginTop:14,padding:'10px 14px'}}>
-                <option value="">— Pick a superlative —</option>
-                {SUPERLATIVE_OPTIONS.map(o=><option key={o} value={o}>{o}</option>)}
-              </select>
-            ) : s.superlative ? (
+              <SuperlativeDropdown
+                value={draft.superlative || ''}
+                customValue={draft.customSuperlative || ''}
+                onChange={val => setDraft(d => ({ ...d, superlative: val, customSuperlative: '' }))}
+                onCustomChange={val => setDraft(d => ({ ...d, customSuperlative: val }))}
+                tv={tv}
+              />
+            ) : displaySuperlative ? (
               <div style={{marginTop:12,display:'inline-flex',alignItems:'center',gap:7,background:tv.tagBg,border:`1px solid ${tv.tagBorder}`,color:tv.tagColor,fontSize:12,fontWeight:600,padding:'5px 14px',borderRadius:100}}>
-                🏆 {s.superlative}
+                🏆 {displaySuperlative}
               </div>
             ) : null}
 
+            {/* Social links */}
             {editing ? (
               <div style={{marginTop:16,display:'flex',flexDirection:'column',gap:10}}>
                 {[{key:'linkedin',icon:'💼',ph:'LinkedIn URL'},{key:'github',icon:'🐙',ph:'GitHub URL'},{key:'instagram',icon:'📸',ph:'Instagram URL'}].map(({key,icon,ph})=>(
@@ -290,6 +436,7 @@ export default function StudentProfile({ studentId, themeVars: tv, onClose }) {
               </div>
             )}
 
+            {/* Accent color picker */}
             {editing && (
               <div style={{marginTop:20}}>
                 <div style={{fontSize:11,...tv.muted,marginBottom:10,textTransform:'uppercase',letterSpacing:1,fontWeight:600}}>Accent Color</div>
@@ -403,7 +550,7 @@ function AdminStudentControls({ student, tv }) {
         <button onClick={()=>approveStudent(student.id,!student.approved)} style={{padding:'7px 16px',borderRadius:100,fontSize:12,fontWeight:500,background:student.approved?'rgba(239,68,68,0.1)':'rgba(16,185,129,0.1)',border:`1px solid ${student.approved?'rgba(239,68,68,0.3)':'rgba(16,185,129,0.3)'}`,color:student.approved?'#ef4444':'#10b981',cursor:'pointer',fontFamily:"'DM Sans',sans-serif"}}>
           {student.approved?'🚫 Hide Profile':'✓ Approve Profile'}
         </button>
-        <button onClick={()=>{if(window.confirm('Clear profile data?'))updateStudent(student.id,{bio:'',legacy:'',photo:null,superlative:'',tags:[],timeline:[]});}} style={{padding:'7px 16px',borderRadius:100,fontSize:12,fontWeight:500,background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)',color:'#ef4444',cursor:'pointer',fontFamily:"'DM Sans',sans-serif"}}>
+        <button onClick={()=>{if(window.confirm('Clear profile data?'))updateStudent(student.id,{bio:'',legacy:'',photo:null,superlative:'',customSuperlative:'',tags:[],timeline:[]});}} style={{padding:'7px 16px',borderRadius:100,fontSize:12,fontWeight:500,background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)',color:'#ef4444',cursor:'pointer',fontFamily:"'DM Sans',sans-serif"}}>
           🗑 Clear Data
         </button>
       </div>
