@@ -1,240 +1,601 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-const MILESTONES = [
-  { year: '2022', label: 'The Beginning', icon: '🌱', desc: 'Orientation, new faces, first lectures. The journey starts.' },
-  { year: '2023', label: 'Finding Our Feet', icon: '⚡', desc: 'Late nights, lab sessions, friendships forged under pressure.' },
-  { year: '2024', label: 'Rising Higher', icon: '🔥', desc: 'Projects, fests, internships. We started becoming who we are.' },
-  { year: '2025', label: 'Final Chapter', icon: '🌟', desc: 'Placements, memories sealed forever.' },
-  { year: '2026', label: 'The Goodbye', icon: '🎓', desc: 'Not an end ... but a launchpad. Batch 2022–26 forever.' },
+/* ─── DATA ──────────────────────────────────────────────── */
+const CHAPTERS = [
+  {
+    year: '2022', sem: 'Sem I & II',
+    label: 'The Nervous Beginning',
+    sub: 'When everything was new',
+    body: 'Orientation day butterflies. Learning names. Struggling with Python programming at midnight, wondering if we chose the right path. We arrived as strangers.',
+    icon: '🌱',
+    tags: ['Orientation', 'First friendships', 'PSP', 'Canteen debuts'],
+    accent: 'rgba(201,136,58,0.14)',
+    border: 'rgba(201,136,58,0.28)',
+  },
+  {
+    year: '2023', sem: 'Sem III & IV',
+    label: 'Finding Our Tribe',
+    sub: 'Late nights & lifelong bonds',
+    body: "Lab sessions, Shared notes, shared panic. The canteen became our second classroom. Strangers became people you'd call at 2am.",
+    icon: '⚡',
+    tags: ['Data Structures', 'Study groups', 'Lab partners', 'Chai runs'],
+    accent: 'rgba(90,122,94,0.14)',
+    border: 'rgba(90,122,94,0.28)',
+  },
+  {
+    year: '2024', sem: 'Sem V & VI',
+    label: 'Rising to the Challenge',
+    sub: 'We started becoming who we are',
+    body: 'First internships, projects that actually worked. The future stopped feeling abstract. We built real things and real confidence.',
+    icon: '🔥',
+    tags: ['Tech Fests', 'Internships', 'Mini projects', 'Presentations'],
+    accent: 'rgba(139,58,42,0.14)',
+    border: 'rgba(139,58,42,0.28)',
+  },
+  {
+    year: '2025', sem: 'Sem VII',
+    label: 'The Weight of Almost',
+    sub: 'Counting every last',
+    body: 'Placements, final year projects, every class suddenly precious. We started counting lasts without realising — last exam, last canteen lunch, last walk to the lab.',
+    icon: '🌟',
+    tags: ['Placements', 'Final project', 'Campus walks', 'Last benches'],
+    accent: 'rgba(90,80,160,0.14)',
+    border: 'rgba(90,80,160,0.28)',
+  },
+  {
+    year: '2026', sem: 'Sem VIII',
+    label: "The Goodbye We're Still Writing",
+    sub: 'Not an end — a launchpad',
+    body: "Batch 2022–26 doesn't stop here. It scatters into a hundred different futures, carrying the same four years. Wherever we go, we carry this place.",
+    icon: '🎓',
+    tags: ['Graduation', 'New beginnings', 'Forever batch', 'See you around'],
+    accent: 'rgba(201,168,76,0.14)',
+    border: 'rgba(201,168,76,0.28)',
+  },
 ];
 
+const STATS = [
+  { num: '4',   label: 'Years Together' },
+  { num: '8',   label: 'Semesters' },
+  { num: '75',  label: 'Batchmates' },
+  { num: '∞',   label: 'Memories' },
+];
+
+/* ─── INTERSECTION REVEAL HOOK ──────────────────────────── */
+function useReveal(threshold = 0.15) {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
+      { threshold }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [threshold]);
+  return [ref, visible];
+}
+
+function Reveal({ children, delay = 0, x = 0, y = 32, scale = 1, threshold = 0.15 }) {
+  const [ref, visible] = useReveal(threshold);
+  return (
+    <div
+      ref={ref}
+      style={{
+        transition: `opacity 0.72s ${delay}s cubic-bezier(.22,1,.36,1), transform 0.72s ${delay}s cubic-bezier(.22,1,.36,1)`,
+        opacity: visible ? 1 : 0,
+        transform: visible
+          ? 'none'
+          : `translate(${x}px, ${y}px) scale(${scale})`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/* ─── AMBER GRADIENT TEXT ───────────────────────────────── */
+const amberGrad = {
+  background: 'linear-gradient(135deg, #c9883a 0%, #e8a84c 50%, #f5c87a 100%)',
+  WebkitBackgroundClip: 'text',
+  backgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+};
+
+/* ─── SECTION HEADER ────────────────────────────────────── */
+function SectionHeader({ eyebrow, title, accent, sub }) {
+  return (
+    <Reveal>
+      <div style={{ textAlign: 'center', marginBottom: 56 }}>
+        <div style={{
+          fontFamily: "'Caveat', cursive",
+          fontSize: 13, letterSpacing: 4,
+          color: 'rgba(201,136,58,0.6)',
+          textTransform: 'uppercase', marginBottom: 14,
+        }}>
+          ✦ &nbsp;{eyebrow}&nbsp; ✦
+        </div>
+        <h2 style={{
+          fontFamily: "'Playfair Display', serif",
+          fontSize: 'clamp(28px,6vw,48px)',
+          fontWeight: 700, lineHeight: 1.1,
+          color: '#f0ead8',
+        }}>
+          {title}{' '}
+          <span style={amberGrad}>{accent}</span>
+        </h2>
+        <div style={{
+          width: 56, height: 1, margin: '16px auto',
+          background: 'linear-gradient(90deg, transparent, rgba(201,136,58,0.55), transparent)',
+        }} />
+        {sub && (
+          <p style={{
+            fontSize: 'clamp(13px,2vw,15px)',
+            color: 'rgba(255,255,255,0.36)',
+            fontWeight: 300,
+          }}>
+            {sub}
+          </p>
+        )}
+      </div>
+    </Reveal>
+  );
+}
+
+/* ─── CHAPTER CARD (mobile-first, alternating on desktop) ── */
+function ChapterCard({ ch, idx }) {
+  const [hov, setHov] = useState(false);
+
+  /* On desktop (≥700px) alternate sides; on mobile always stack */
+  const isLeft = idx % 2 === 0;
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',        /* mobile default: stack */
+      alignItems: 'stretch',
+      marginBottom: 48,
+      position: 'relative',
+    }}>
+      {/* Responsive row wrapper — only applies on wider screens via inline trick */}
+      <style>{`
+        @media (min-width: 700px) {
+          .ch-row-${idx} {
+            flex-direction: ${isLeft ? 'row' : 'row-reverse'} !important;
+            align-items: center !important;
+          }
+          .ch-spacer-${idx} { display: flex !important; }
+        }
+      `}</style>
+
+      <div className={`ch-row-${idx}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 0 }}>
+
+        {/* Card */}
+        <Reveal x={isLeft ? -28 : 28} y={0} delay={0.05}>
+          <div
+            onMouseEnter={() => setHov(true)}
+            onMouseLeave={() => setHov(false)}
+            style={{
+              background: ch.accent,
+              border: `1px solid ${hov ? ch.border.replace('0.28', '0.55') : ch.border}`,
+              borderRadius: 18,
+              padding: 'clamp(20px,4vw,32px) clamp(18px,4vw,36px)',
+              backdropFilter: 'blur(16px)',
+              transform: hov ? 'translateY(-5px)' : 'none',
+              boxShadow: hov ? '0 18px 48px rgba(0,0,0,0.38)' : 'none',
+              transition: 'transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease',
+              flex: 1,
+            }}
+          >
+            {/* Year row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <span style={{
+                fontFamily: "'Caveat', cursive",
+                fontSize: 12, fontWeight: 700, letterSpacing: 2,
+                color: 'rgba(245,200,120,0.75)', textTransform: 'uppercase',
+              }}>{ch.year}</span>
+              <span style={{ width: 1, height: 11, background: 'rgba(255,255,255,0.13)' }} />
+              <span style={{
+                fontFamily: "'Caveat', cursive",
+                fontSize: 12, color: 'rgba(255,255,255,0.32)',
+              }}>{ch.sem}</span>
+            </div>
+
+            <h3 style={{
+              fontFamily: "'Playfair Display', serif",
+              fontSize: 'clamp(17px,3vw,22px)',
+              fontWeight: 700, color: '#f0ead8',
+              lineHeight: 1.2, marginBottom: 4,
+            }}>{ch.label}</h3>
+
+            <div style={{
+              fontFamily: "'Caveat', cursive",
+              fontSize: 14, color: 'rgba(245,200,120,0.5)',
+              marginBottom: 14, fontStyle: 'italic',
+            }}>{ch.sub}</div>
+
+            <div style={{
+              height: 1, marginBottom: 16,
+              background: 'linear-gradient(90deg, rgba(240,234,216,0.12), transparent)',
+            }} />
+
+            <p style={{
+              fontSize: 'clamp(13px,2vw,14px)',
+              color: 'rgba(255,255,255,0.52)',
+              lineHeight: 1.8, fontWeight: 300, marginBottom: 16,
+            }}>{ch.body}</p>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {ch.tags.map(t => (
+                <span key={t} style={{
+                  fontFamily: "'Caveat', cursive",
+                  fontSize: 12, padding: '3px 11px',
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.09)',
+                  borderRadius: 100, color: 'rgba(255,255,255,0.42)',
+                }}>{t}</span>
+              ))}
+            </div>
+          </div>
+        </Reveal>
+
+        {/* Spine node (hidden on mobile, shown on desktop via CSS) */}
+        <div
+          className={`ch-spacer-${idx}`}
+          style={{
+            display: 'none',
+            width: 72, flexShrink: 0,
+            justifyContent: 'center', alignItems: 'center',
+            position: 'relative', zIndex: 2,
+          }}
+        >
+          <Reveal scale={0.7} y={0} delay={0}>
+            <div style={{
+              width: 46, height: 46, borderRadius: '50%',
+              background: 'linear-gradient(145deg,rgba(201,136,58,0.2),rgba(201,136,58,0.06))',
+              border: '1.5px solid rgba(201,136,58,0.38)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 18,
+              boxShadow: '0 0 0 8px rgba(201,136,58,0.05)',
+            }}>{ch.icon}</div>
+          </Reveal>
+        </div>
+
+        {/* Mobile icon (shown on mobile only) */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          margin: '12px 0 0 8px',
+        }}>
+          <span style={{ fontSize: 20 }}>{ch.icon}</span>
+          <div style={{
+            flex: 1, height: 1,
+            background: 'linear-gradient(90deg, rgba(201,136,58,0.3), transparent)',
+          }} />
+        </div>
+
+        <div style={{ flex: 1 }} />
+      </div>
+    </div>
+  );
+}
+
+/* ─── CLOSING BOARD ─────────────────────────────────────── */
+function ClosingBoard({ onNavigate }) {
+  return (
+    <section style={{
+      padding: 'clamp(64px,10vw,100px) clamp(16px,5vw,28px) clamp(80px,12vw,120px)',
+      textAlign: 'center', position: 'relative', overflow: 'hidden',
+      background: 'linear-gradient(180deg,transparent,rgba(42,61,50,0.1) 50%,rgba(14,11,7,0.55) 100%)',
+    }}>
+      {/* Chalkboard rect — hidden on tiny screens */}
+      <div style={{
+        position: 'absolute', top: '50%', left: '50%',
+        transform: 'translate(-50%,-50%)',
+        width: 'min(560px, 90vw)', height: 280,
+        background: 'rgba(42,61,50,0.16)',
+        border: '1px solid rgba(42,61,50,0.38)',
+        borderRadius: 4,
+        boxShadow: '0 0 80px rgba(42,61,50,0.12),inset 0 0 40px rgba(0,0,0,0.2)',
+        pointerEvents: 'none',
+      }} />
+
+      <Reveal>
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{
+            fontFamily: "'Caveat', cursive",
+            fontSize: 12, letterSpacing: 4,
+            color: 'rgba(201,136,58,0.5)',
+            textTransform: 'uppercase', marginBottom: 22,
+          }}>✦ &nbsp;The Memories Live On&nbsp; ✦</div>
+
+          <h2 style={{
+            fontFamily: "'Playfair Display', serif",
+            fontSize: 'clamp(22px,5vw,40px)',
+            fontWeight: 700, color: '#f0ead8',
+            lineHeight: 1.2, marginBottom: 14,
+          }}>
+            Ready to relive the best<br />
+            <span style={amberGrad}>years of our lives?</span>
+          </h2>
+
+          <div style={{
+            fontFamily: "'Caveat', cursive",
+            fontSize: 'clamp(16px,3vw,18px)',
+            color: 'rgba(240,234,216,0.38)',
+            marginBottom: 40, fontStyle: 'italic',
+          }}>
+            "Not an end — a beginning in disguise."
+          </div>
+
+          <div style={{
+            display: 'flex', gap: 12,
+            justifyContent: 'center', flexWrap: 'wrap',
+          }}>
+            {[
+              { label: '📖 Yearbook',   page: 'yearbook' },
+              { label: '🖼 Media Vault', page: 'media'    },
+              { label: '📝 The Wall',   page: 'wall'     },
+            ].map(b => (
+              <button
+                key={b.page}
+                onClick={() => onNavigate(b.page)}
+                className="btn-ghost-amber"
+                style={{
+                  padding: 'clamp(10px,2vw,13px) clamp(18px,4vw,28px)',
+                  borderRadius: 100, fontSize: 'clamp(12px,2vw,14px)',
+                  fontFamily: "'DM Sans',sans-serif", fontWeight: 500,
+                }}
+              >{b.label}</button>
+            ))}
+          </div>
+        </div>
+      </Reveal>
+    </section>
+  );
+}
+
+/* ─── MAIN PAGE ─────────────────────────────────────────── */
 export default function Journey({ onNavigate }) {
-  const [scrolled, setScrolled] = useState(0);
   const containerRef = useRef();
+  const [scrollY, setScrollY] = useState(0);
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const handler = () => {
-      const pct = el.scrollTop / (el.scrollHeight - el.clientHeight);
-      setScrolled(pct);
-    };
-    el.addEventListener('scroll', handler);
+    const handler = () => setScrollY(el.scrollTop);
+    el.addEventListener('scroll', handler, { passive: true });
     return () => el.removeEventListener('scroll', handler);
   }, []);
+
+  const heroParallax = scrollY * 0.35;
+  const heroOpacity  = Math.max(0, 1 - scrollY / 550);
 
   return (
     <div
       ref={containerRef}
       style={{
         position: 'relative', zIndex: 2,
-        height: 'calc(100vh - 60px)',
-        overflowY: 'auto',
+        height: 'calc(100vh - 64px)',
+        overflowY: 'auto', overflowX: 'hidden',
         scrollBehavior: 'smooth',
       }}
     >
-      {/* ── Hero ── */}
+
+      {/* ══════ HERO ══════ */}
       <section style={{
         minHeight: '100vh',
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
-        textAlign: 'center', padding: '40px 20px',
+        textAlign: 'center',
+        padding: 'clamp(80px,12vh,120px) clamp(16px,5vw,40px) clamp(60px,8vh,80px)',
         position: 'relative', overflow: 'hidden',
       }}>
-        {/* Cinematic vignette */}
+        {/* Vignette */}
         <div style={{
-          position: 'absolute', inset: 0,
-          background: 'radial-gradient(ellipse at center, transparent 30%, rgba(13,11,24,0.65) 100%)',
-          pointerEvents: 'none', zIndex: 1,
+          position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1,
+          background: 'radial-gradient(ellipse 85% 75% at 50% 50%,transparent 30%,rgba(14,11,7,0.65) 100%)',
+        }} />
+        {/* Warm ambient orb */}
+        <div style={{
+          position: 'absolute', top: '18%', left: '50%', transform: 'translateX(-50%)',
+          width: 'min(500px,90vw)', height: 'min(500px,90vw)',
+          borderRadius: '50%', pointerEvents: 'none',
+          background: 'radial-gradient(circle,rgba(201,136,58,0.09) 0%,transparent 70%)',
+          animation: 'heroFloat 8s ease-in-out infinite',
+          zIndex: 0,
         }} />
 
-        {/* Floating orbs */}
-        <div style={{ position:'absolute', width:600, height:600, borderRadius:'50%', background:'radial-gradient(circle,rgba(212,175,55,0.12),transparent 70%)', top:'10%', left:'50%', transform:'translateX(-50%)', animation:'drift 10s ease-in-out infinite alternate', pointerEvents:'none' }} />
-        <div style={{ position:'absolute', width:350, height:350, borderRadius:'50%', background:'radial-gradient(circle,rgba(108,71,255,0.1),transparent 70%)', bottom:'15%', right:'10%', animation:'drift 13s ease-in-out infinite alternate-reverse', pointerEvents:'none' }} />
-
-        <div style={{ position:'relative', zIndex:2 }}>
+        {/* Parallax content */}
+        <div style={{
+          transform: `translateY(${heroParallax}px)`,
+          opacity: heroOpacity,
+          position: 'relative', zIndex: 2,
+          width: '100%', maxWidth: 680,
+        }}>
           {/* Badge */}
           <div className="fade-up" style={{
-            display:'inline-flex', alignItems:'center', gap:8,
-            background:'rgba(212,175,55,0.1)', border:'1px solid rgba(212,175,55,0.35)',
-            color:'#d4af37', fontSize:12, fontWeight:600, letterSpacing:2,
-            padding:'7px 20px', borderRadius:100, marginBottom:28,
-            textTransform:'uppercase',
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            background: 'rgba(201,136,58,0.08)',
+            border: '1px solid rgba(201,136,58,0.22)',
+            padding: 'clamp(6px,1.5vw,8px) clamp(14px,3vw,22px)',
+            borderRadius: 100, marginBottom: 'clamp(24px,4vh,36px)',
           }}>
-            ✦ Batch 2022 – 2026
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#c9883a', display: 'inline-block' }} />
+            <span style={{
+              fontFamily: "'Caveat',cursive",
+              fontSize: 'clamp(11px,2vw,14px)', fontWeight: 600,
+              letterSpacing: 'clamp(1px,0.5vw,3px)',
+              color: '#c9883a', textTransform: 'uppercase',
+            }}>IT Department · Batch 2022–2026</span>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#c9883a', display: 'inline-block' }} />
           </div>
 
+          {/* Headline */}
           <h1 className="fade-up" style={{
-            fontFamily:"'Fraunces',serif",
-            fontSize:'clamp(42px, 8vw, 88px)',
-            fontWeight:700, lineHeight:1.05,
-            color:'#fff',
-            marginBottom:20,
-            animationDelay:'0.1s',
-            textShadow:'0 4px 40px rgba(212,175,55,0.2)',
-          }}>
-            Four Years.<br />
-            <span style={{ color:'#d4af37' }}>One Story.</span>
-          </h1>
+            fontFamily: "'Playfair Display',serif",
+            fontSize: 'clamp(44px,11vw,104px)',
+            fontWeight: 900, lineHeight: 1.0,
+            color: '#f0ead8', marginBottom: 6,
+            animationDelay: '0.1s', letterSpacing: -2,
+          }}>Four Years.</h1>
+          <h1 className="fade-up" style={{
+            fontFamily: "'Playfair Display',serif",
+            fontSize: 'clamp(44px,11vw,104px)',
+            fontWeight: 900, lineHeight: 1.0,
+            marginBottom: 'clamp(20px,3vh,30px)',
+            animationDelay: '0.18s', letterSpacing: -2,
+            ...amberGrad,
+          }}>One Story.</h1>
+
+          {/* Divider */}
+          <div className="fade-up" style={{
+            width: 72, height: 1, margin: '0 auto clamp(20px,3vh,32px)',
+            background: 'linear-gradient(90deg,transparent,rgba(201,136,58,0.6),transparent)',
+            animationDelay: '0.24s',
+          }} />
 
           <p className="fade-up" style={{
-            fontSize:'clamp(15px, 2vw, 19px)',
-            color:'rgba(255,255,255,0.6)',
-            lineHeight:1.7, maxWidth:520, margin:'0 auto 40px',
-            animationDelay:'0.2s',
+            fontSize: 'clamp(14px,2.2vw,18px)',
+            color: 'rgba(240,234,216,0.48)',
+            lineHeight: 1.8, maxWidth: 480, margin: '0 auto clamp(32px,5vh,48px)',
+            fontWeight: 300, animationDelay: '0.28s',
           }}>
             From nervous freshers to confident graduates —<br />
             this is our journey, sealed in memory forever.
           </p>
 
-          <div className="fade-up" style={{ display:'flex', gap:14, justifyContent:'center', flexWrap:'wrap', animationDelay:'0.3s' }}>
+          {/* CTAs */}
+          <div className="fade-up" style={{
+            display: 'flex', gap: 12, justifyContent: 'center',
+            flexWrap: 'wrap', animationDelay: '0.35s',
+          }}>
             <button
-              onClick={() => containerRef.current?.scrollTo({ top: window.innerHeight, behavior:'smooth' })}
+              onClick={() => containerRef.current?.scrollTo({ top: window.innerHeight * 0.88, behavior: 'smooth' })}
+              className="btn-amber"
               style={{
-                padding:'15px 36px', borderRadius:100,
-                background:'linear-gradient(135deg,#d4af37,#f5c842)',
-                color:'#0d0b18', fontSize:16, fontWeight:700,
-                border:'none', cursor:'pointer',
-                boxShadow:'0 8px 32px rgba(212,175,55,0.4)',
-                fontFamily:"'DM Sans',sans-serif",
-                transition:'all 0.25s',
+                padding: 'clamp(12px,2vw,15px) clamp(24px,5vw,38px)',
+                borderRadius: 100, fontSize: 'clamp(13px,2vw,15px)',
+                fontFamily: "'DM Sans',sans-serif",
               }}
-              onMouseEnter={e => { e.currentTarget.style.transform='translateY(-3px)'; e.currentTarget.style.boxShadow='0 14px 44px rgba(212,175,55,0.55)'; }}
-              onMouseLeave={e => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 8px 32px rgba(212,175,55,0.4)'; }}
-            >
-              Start the Journey →
-            </button>
+            >Relive the Journey ↓</button>
             <button
               onClick={() => onNavigate('yearbook')}
+              className="btn-ghost-amber"
               style={{
-                padding:'15px 36px', borderRadius:100,
-                background:'rgba(255,255,255,0.07)',
-                border:'1px solid rgba(255,255,255,0.2)',
-                color:'#fff', fontSize:16, fontWeight:500,
-                cursor:'pointer', fontFamily:"'DM Sans',sans-serif",
-                transition:'all 0.25s',
+                padding: 'clamp(12px,2vw,15px) clamp(24px,5vw,38px)',
+                borderRadius: 100, fontSize: 'clamp(13px,2vw,15px)',
+                fontFamily: "'DM Sans',sans-serif", fontWeight: 500,
               }}
-              onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.13)'}
-              onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.07)'}
-            >
-              View Yearbook
-            </button>
+            >Open Yearbook</button>
           </div>
 
-          {/* Scroll hint */}
-          <div style={{ marginTop:64, opacity:0.4, animation:'bounce 2s ease-in-out infinite', fontSize:22 }}>↓</div>
-        </div>
-      </section>
-
-      {/* ── Timeline ── */}
-      <section style={{ maxWidth:760, margin:'0 auto', padding:'80px 24px' }}>
-        <div className="fade-up" style={{ textAlign:'center', marginBottom:64 }}>
-          <div style={{ color:'#d4af37', fontSize:11, fontWeight:600, letterSpacing:3, textTransform:'uppercase', marginBottom:12 }}>Our Story</div>
-          <div style={{ fontFamily:"'Fraunces',serif", fontSize:'clamp(28px,5vw,46px)', fontWeight:700, color:'#fff', lineHeight:1.15 }}>
-            The Road We Walked
-          </div>
-        </div>
-
-        <div style={{ position:'relative' }}>
-          {/* Spine */}
+          {/* Scroll cue */}
           <div style={{
-            position:'absolute', left:'50%', top:0, bottom:0, width:2,
-            background:'linear-gradient(180deg,#d4af37,rgba(212,175,55,0.1))',
-            transform:'translateX(-50%)', borderRadius:2,
-          }} />
-
-          {MILESTONES.map((m, i) => (
-            <div
-              key={m.year}
-              className="fade-up"
-              style={{
-                display:'flex',
-                flexDirection: i % 2 === 0 ? 'row' : 'row-reverse',
-                alignItems:'center', gap:32,
-                marginBottom:48,
-                animationDelay:`${i * 0.12}s`,
-              }}
-            >
-              {/* Card */}
-              <div style={{
-                flex:1,
-                background:'rgba(255,255,255,0.04)',
-                border:'1px solid rgba(212,175,55,0.18)',
-                borderRadius:20, padding:'22px 26px',
-                backdropFilter:'blur(12px)',
-                boxShadow:'0 4px 24px rgba(0,0,0,0.2)',
-                textAlign: i % 2 === 0 ? 'right' : 'left',
-                transition:'all 0.3s',
-              }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor='rgba(212,175,55,0.45)'; e.currentTarget.style.transform='translateY(-4px)'; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor='rgba(212,175,55,0.18)'; e.currentTarget.style.transform=''; }}
-              >
-                <div style={{ fontSize:11, color:'#d4af37', fontWeight:600, letterSpacing:2, textTransform:'uppercase', marginBottom:6 }}>{m.year}</div>
-                <div style={{ fontFamily:"'Fraunces',serif", fontSize:20, fontWeight:600, color:'#fff', marginBottom:8 }}>{m.label}</div>
-                <div style={{ fontSize:14, color:'rgba(255,255,255,0.55)', lineHeight:1.65 }}>{m.desc}</div>
-              </div>
-
-              {/* Center node */}
-              <div style={{
-                width:52, height:52, borderRadius:'50%', flexShrink:0,
-                background:'linear-gradient(135deg,rgba(212,175,55,0.2),rgba(245,200,66,0.1))',
-                border:'2px solid rgba(212,175,55,0.5)',
-                display:'flex', alignItems:'center', justifyContent:'center',
-                fontSize:22, zIndex:2,
-                boxShadow:'0 0 0 6px rgba(212,175,55,0.08)',
-              }}>
-                {m.icon}
-              </div>
-
-              <div style={{ flex:1 }} />
-            </div>
-          ))}
+            marginTop: 'clamp(48px,7vh,72px)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+          }}>
+            <div style={{
+              width: 1, height: 44,
+              background: 'linear-gradient(180deg,transparent,rgba(201,136,58,0.65))',
+              animation: 'scrollPulse 2.2s ease-in-out infinite',
+            }} />
+            <div style={{
+              fontFamily: "'Caveat',cursive",
+              fontSize: 10, letterSpacing: 3,
+              color: 'rgba(201,136,58,0.38)', textTransform: 'uppercase',
+            }}>scroll</div>
+          </div>
         </div>
       </section>
 
-      {/* ── CTA ── */}
+      {/* ══════ STATS BAND ══════ */}
       <section style={{
-        textAlign:'center', padding:'80px 24px 120px',
-        background:'linear-gradient(180deg,transparent,rgba(212,175,55,0.04))',
+        borderTop: '1px solid rgba(201,136,58,0.1)',
+        borderBottom: '1px solid rgba(201,136,58,0.1)',
+        background: 'rgba(201,136,58,0.03)',
+        padding: 'clamp(32px,5vh,48px) clamp(16px,5vw,24px)',
       }}>
-        <div className="fade-up" style={{
-          fontFamily:"'Fraunces',serif",
-          fontSize:'clamp(26px,5vw,42px)',
-          fontWeight:700, color:'#fff', marginBottom:16, lineHeight:1.2,
-        }}>
-          Ready to relive the memories?
-        </div>
-        <p style={{ color:'rgba(255,255,255,0.5)', fontSize:16, marginBottom:36 }}>
-          Explore the yearbook, the wall, and everything in between.
-        </p>
-        <div style={{ display:'flex', gap:14, justifyContent:'center', flexWrap:'wrap' }}>
-          {[
-            { label:'📖 Yearbook', page:'yearbook' },
-            { label:'🖼 Media Vault', page:'media' },
-            { label:'📝 The Wall', page:'wall' },
-          ].map(btn => (
-            <button
-              key={btn.page}
-              onClick={() => onNavigate(btn.page)}
-              style={{
-                padding:'13px 28px', borderRadius:100,
-                background:'rgba(212,175,55,0.1)',
-                border:'1px solid rgba(212,175,55,0.35)',
-                color:'#d4af37', fontSize:15, fontWeight:500,
-                cursor:'pointer', fontFamily:"'DM Sans',sans-serif",
-                transition:'all 0.22s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background='rgba(212,175,55,0.2)'; e.currentTarget.style.transform='translateY(-3px)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background='rgba(212,175,55,0.1)'; e.currentTarget.style.transform=''; }}
-            >
-              {btn.label}
-            </button>
+        <Reveal>
+          <div style={{
+            maxWidth: 860, margin: '0 auto',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4,1fr)',
+            gap: 'clamp(16px,3vw,32px)',
+          }}>
+            {STATS.map(s => (
+              <div key={s.label} style={{ textAlign: 'center' }}>
+                <div style={{
+                  fontFamily: "'Playfair Display',serif",
+                  fontSize: 'clamp(32px,7vw,56px)',
+                  fontWeight: 700, lineHeight: 1, marginBottom: 6,
+                  ...amberGrad,
+                }}>{s.num}</div>
+                <div style={{
+                  fontFamily: "'Caveat',cursive",
+                  fontSize: 'clamp(10px,1.8vw,13px)',
+                  color: 'rgba(255,255,255,0.32)',
+                  letterSpacing: 1.5, textTransform: 'uppercase',
+                }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </Reveal>
+      </section>
+
+      {/* ══════ TIMELINE ══════ */}
+      <section style={{
+        maxWidth: 900, margin: '0 auto',
+        padding: 'clamp(64px,10vh,100px) clamp(16px,5vw,28px) clamp(48px,8vh,80px)',
+      }}>
+        <SectionHeader
+          eyebrow="Our Story"
+          title="The Road"
+          accent="We Walked"
+          sub="Five chapters. One unforgettable batch."
+        />
+
+        {/* Spine — desktop only */}
+        <div style={{ position: 'relative' }}>
+          <style>{`
+            @media (min-width: 700px) {
+              .ch-spine { display: block !important; }
+              .ch-mobile-icon { display: none !important; }
+            }
+          `}</style>
+          <div
+            className="ch-spine"
+            style={{
+              display: 'none',
+              position: 'absolute', left: '50%', top: 0, bottom: 0, width: 1,
+              transform: 'translateX(-50%)',
+              background: 'linear-gradient(180deg,rgba(201,136,58,0.45) 0%,rgba(201,136,58,0.06) 100%)',
+              pointerEvents: 'none',
+            }}
+          />
+          {CHAPTERS.map((ch, i) => (
+            <ChapterCard key={ch.year} ch={ch} idx={i} />
           ))}
         </div>
       </section>
+
+      {/* ══════ CLOSING BOARD ══════ */}
+      <ClosingBoard onNavigate={onNavigate} />
 
       <style>{`
-        @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(8px)} }
+        @keyframes heroFloat {
+          0%,100% { transform:translateX(-50%) translateY(0); }
+          50%      { transform:translateX(-50%) translateY(-18px); }
+        }
+        @keyframes scrollPulse {
+          0%,100% { opacity:.38; }
+          50%      { opacity:.85; }
+        }
+        /* Mobile: chapter rows always stack */
+        @media (max-width: 699px) {
+          .ch-mobile-icon { display:flex !important; }
+        }
       `}</style>
     </div>
   );
