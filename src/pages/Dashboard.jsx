@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { useYearbook } from '../context/YearbookContext';
 import MemberAvatars from '../components/MemberAvatars';
 import TrustBadge from '../components/TrustBadge';
+import ProfileNudge from '../components/ProfileNudge';
 import CreateVaultModal from '../components/CreateVaultModal';
 
 const COVER_GRADIENTS = {
@@ -28,10 +29,12 @@ export default function Dashboard() {
       {/* Header */}
       <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:36, flexWrap:'wrap', gap:16 }}>
         <div>
-          <div className="fade-up" style={{ fontFamily:"'Fraunces',serif", fontSize:34, fontWeight:700, lineHeight:1.1, color:'#fff' }}>
-            Hey {firstName} 👋<br />
-            <span style={{ color:'#d4af37' }}>Class Vaults</span>
-          </div>
+          <ProfileNudge>
+            <div className="fade-up" style={{ fontFamily:"'Fraunces',serif", fontSize:34, fontWeight:700, lineHeight:1.1, color:'#fff', cursor:'default' }}>
+              Hey {firstName} 👋<br />
+              <span style={{ color:'#d4af37' }}>Class Vaults</span>
+            </div>
+          </ProfileNudge>
           <p style={{ fontSize:15, color:'rgba(255,255,255,0.5)', marginTop:8 }}>
             Private group memory spaces for your batch ✦
           </p>
@@ -96,10 +99,8 @@ function VaultCard({ vault: v, onClick, delay, currentUser }) {
   const { isAdmin } = useYearbook();
   const [confirmDel, setConfirmDel] = useState(false);
 
-  // First memberName is always the creator
   const isCreator = v.memberNames?.[0] === currentUser;
   const canDelete  = isCreator || isAdmin;
-
   const coverGrad = v.locked ? COVER_GRADIENTS.Locked : (COVER_GRADIENTS[v.theme] || COVER_GRADIENTS.Other);
 
   const handleDelete = (e) => {
@@ -123,11 +124,8 @@ function VaultCard({ vault: v, onClick, delay, currentUser }) {
       onMouseEnter={e => { e.currentTarget.style.transform='translateY(-4px)'; e.currentTarget.style.boxShadow='0 12px 32px rgba(108,71,255,0.15)'; }}
       onMouseLeave={e => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 4px 20px rgba(108,71,255,0.07)'; setConfirmDel(false); }}
     >
-      {/* Cover */}
       <div style={{ height:154, position:'relative', overflow:'hidden', background:coverGrad, display:'flex', alignItems:'center', justifyContent:'center', fontSize:56 }}>
         <span>{v.locked ? '🔒' : v.emoji}</span>
-
-        {/* Privacy pill */}
         <div style={{
           position:'absolute', top:10, right:10,
           background: v.locked ? 'rgba(245,158,11,0.75)' : v.privacy==='public' ? 'rgba(20,184,166,0.75)' : 'rgba(0,0,0,0.45)',
@@ -136,8 +134,6 @@ function VaultCard({ vault: v, onClick, delay, currentUser }) {
         }}>
           {v.locked ? '🔒 Sealed' : `${PRIVACY_ICONS[v.privacy]||'🌐'} ${v.privacy==='password'?'Password':v.privacy==='invite'?'Invite only':'Public'}`}
         </div>
-
-        {/* Delete button — only for creator/admin */}
         {canDelete && (
           <button
             onClick={handleDelete}
@@ -147,8 +143,7 @@ function VaultCard({ vault: v, onClick, delay, currentUser }) {
               padding:'4px 12px', borderRadius:100, fontSize:11, fontWeight:600,
               background: confirmDel ? '#ef4444' : 'rgba(239,68,68,0.8)',
               border:'none', color:'#fff', cursor:'pointer',
-              backdropFilter:'blur(8px)',
-              transition:'all 0.18s',
+              backdropFilter:'blur(8px)', transition:'all 0.18s',
               boxShadow:'0 2px 8px rgba(0,0,0,0.3)',
             }}
           >
@@ -157,7 +152,6 @@ function VaultCard({ vault: v, onClick, delay, currentUser }) {
         )}
       </div>
 
-      {/* Body */}
       <div style={{ padding:'16px 18px' }}>
         <div style={{ fontFamily:"'Fraunces',serif", fontSize:17, fontWeight:600, color:'#0d0b18', marginBottom:10 }}>{v.name}</div>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
@@ -166,10 +160,7 @@ function VaultCard({ vault: v, onClick, delay, currentUser }) {
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:'#0f6e56', fontWeight:500, background:'rgba(20,184,166,0.07)', border:'1px solid rgba(20,184,166,0.2)', padding:'3px 10px', borderRadius:100, width:'fit-content' }}>
           <span>🔐</span>
-          {/* {v.locked ? 'Time capsule · Sealed' : 'Private vault · Members only'} */}
         </div>
-
-        {/* Creator badge */}
         {isCreator && (
           <div style={{ marginTop:8, fontSize:10, color:'#7c3aed', fontWeight:600, opacity:0.7 }}>
             ✦ You created this vault

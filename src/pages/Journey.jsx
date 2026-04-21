@@ -428,7 +428,7 @@ export default function Journey({ onNavigate }) {
               fontSize: 'clamp(11px,2vw,14px)', fontWeight: 600,
               letterSpacing: 'clamp(1px,0.5vw,3px)',
               color: '#c9883a', textTransform: 'uppercase',
-            }}>IT Department · Batch 2022–2026</span>
+            }}>IT -1 · Batch 2022–2026</span>
             <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#c9883a', display: 'inline-block' }} />
           </div>
 

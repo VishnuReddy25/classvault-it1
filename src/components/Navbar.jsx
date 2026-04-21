@@ -1,6 +1,7 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
 import { useYearbook } from '../context/YearbookContext';
+import ProfileNudge from './ProfileNudge';
 
 export default function Navbar() {
   const { activeVault, exitVault } = useApp();
@@ -34,20 +35,22 @@ export default function Navbar() {
         </button>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{
-          width: 34, height: 34, borderRadius: '50%',
-          background: sessionStudent.gradient,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 12, fontWeight: 700, color: '#fff',
-          border: '2px solid rgba(108,71,255,0.2)',
-        }}>
-          {sessionStudent.initials}
+      <ProfileNudge>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+          <div style={{
+            width: 34, height: 34, borderRadius: '50%',
+            background: sessionStudent.gradient,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 12, fontWeight: 700, color: '#fff',
+            border: '2px solid rgba(108,71,255,0.2)',
+          }}>
+            {sessionStudent.initials}
+          </div>
+          <span style={{ fontSize: 13, fontWeight: 500, color: '#2d2a45' }}>
+            {sessionStudent.name.split(' ')[0]}
+          </span>
         </div>
-        <span style={{ fontSize: 13, fontWeight: 500, color: '#2d2a45' }}>
-          {sessionStudent.name.split(' ')[0]}
-        </span>
-      </div>
+      </ProfileNudge>
     </nav>
   );
 }
