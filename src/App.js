@@ -4,6 +4,7 @@ import { YearbookProvider, useYearbook } from './context/YearbookContext';
 import MeshBackground from './components/MeshBackground';
 import CursorTrail from './components/CursorTrail';
 import FarewellNavbar from './components/FarewellNavbar';
+import ProfileCompletePrompt from './components/ProfileCompletePrompt';
 import Onboarding from './pages/Onboarding';
 import Journey from './pages/Journey';
 import IT1Yearbook from './pages/IT1Yearbook';
@@ -11,9 +12,11 @@ import MediaVault from './pages/MediaVault';
 import TheWall from './pages/TheWall';
 import Dashboard from './pages/Dashboard';
 import VaultPage from './pages/VaultPage';
+import StudentProfile from './components/yearbook/StudentProfile';
 import { useApp } from './context/AppContext';
+import { getThemeVars } from './pages/IT1Yearbook';
 
-/* ── Smooth page transition wrapper ─────────────────────── */
+/* ── Page transition wrapper ─────────────────────────────── */
 function PageTransition({ children, pageKey }) {
   const [displayed, setDisplayed] = useState(children);
   const [phase, setPhase]         = useState('idle');
@@ -48,11 +51,14 @@ function PageTransition({ children, pageKey }) {
   );
 }
 
-/* ── Inner ───────────────────────────────────────────────── */
+/* ── Inner app ───────────────────────────────────────────── */
 function Inner() {
-  const { sessionId, sessionStudent, lockSession } = useYearbook();
+  const { sessionId, sessionStudent, lockSession, theme } = useYearbook();
   const { activeVaultId } = useApp();
-  const [page, setPage] = useState('journey');
+  const [page, setPage]           = useState('journey');
+  const [profileOpen, setProfileOpen] = useState(null); // studentId or null
+
+  const tv = getThemeVars(theme || 'dark');
 
   if (!sessionId) return <Onboarding />;
 
@@ -78,8 +84,32 @@ function Inner() {
 
   return (
     <>
-      <FarewellNavbar page={page} onNavigate={setPage} sessionStudent={sessionStudent} onLogout={lockSession} />
-      <PageTransition pageKey={page}>{renderPage()}</PageTransition>
+      <FarewellNavbar
+        page={page}
+        onNavigate={setPage}
+        sessionStudent={sessionStudent}
+        onLogout={lockSession}
+      />
+      <PageTransition pageKey={page}>
+        {renderPage()}
+      </PageTransition>
+
+      {/* Profile complete prompt — always visible when logged in */}
+      <ProfileCompletePrompt
+        onOpenProfile={(studentId) => {
+          setProfileOpen(studentId);
+          setPage('yearbook');
+        }}
+      />
+
+      {/* Global profile modal (opened from the prompt) */}
+      {profileOpen && (
+        <StudentProfile
+          studentId={profileOpen}
+          themeVars={tv}
+          onClose={() => setProfileOpen(null)}
+        />
+      )}
     </>
   );
 }
