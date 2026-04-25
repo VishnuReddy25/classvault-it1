@@ -6,18 +6,18 @@ import {
 import { db } from '../firebase';
 import { IT1_STUDENTS } from '../data/it1Students';
 import { deleteFromCloudinary } from './AppContext';
+import { compressDataUrl, compressFile, formatBytes } from '../utils/compressImage';
 
 const YearbookContext = createContext(null);
 
-const ADMIN_PIN          = 'CBIT-IT-22-26';
-const COLL_STUDENTS      = 'students';
-const COLL_CLAIMS        = 'claims';
-const COLL_WALL          = 'wallPosts';
-const COLL_TESTIMONIALS  = 'testimonials';
-const COLL_MEDIA         = 'media';
+const ADMIN_PIN         = 'CBIT-IT-22-26';
+const COLL_STUDENTS     = 'students';
+const COLL_CLAIMS       = 'claims';
+const COLL_WALL         = 'wallPosts';
+const COLL_TESTIMONIALS = 'testimonials';
+const COLL_MEDIA        = 'media';
 
-// 🔥 REPLACE with your actual Cloudinary cloud name
-const CLOUDINARY_CLOUD_NAME = 'dirlbqjpb';
+const CLOUDINARY_CLOUD_NAME    = 'dirlbqjpb';
 const CLOUDINARY_UPLOAD_PRESET = 'classvault';
 
 function simpleHash(str) {
@@ -32,9 +32,7 @@ export function YearbookProvider({ children }) {
   const [wallPosts,    setWallPosts]    = useState([]);
   const [testimonials, setTestimonials] = useState([]);
   const [mediaWallet,  setMediaWallet]  = useState({});
-  const [sessionId,    setSessionId]    = useState(() => {
-    return localStorage.getItem('sessionId');
-  });
+  const [sessionId,    setSessionId]    = useState(() => localStorage.getItem('sessionId'));
   const [isAdmin,      setIsAdmin]      = useState(false);
   const [theme,        setTheme]        = useState('dark');
   const [loading,      setLoading]      = useState(true);
@@ -47,8 +45,8 @@ export function YearbookProvider({ children }) {
 
     const withTimeout = (promise, ms) => new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('timeout')), ms);
-      promise.then((value) => { clearTimeout(timer); resolve(value); })
-             .catch((err)  => { clearTimeout(timer); reject(err); });
+      promise.then(v => { clearTimeout(timer); resolve(v); })
+             .catch(e => { clearTimeout(timer); reject(e); });
     });
 
     async function init() {
@@ -63,60 +61,57 @@ export function YearbookProvider({ children }) {
         }
 
         fallbackTimer = setTimeout(() => {
-          console.warn('Firestore snapshot timeout; switching to local demo data.');
-          setError('Firestore access timed out; using local demo data.');
+          console.warn('Firestore timeout — local mode.');
+          setError('Firestore timed out; using local demo data.');
           setStudents(IT1_STUDENTS);
           setClaims({});
           setUseLocalMode(true);
           setLoading(false);
         }, 5500);
 
-        unsubs.push(onSnapshot(collection(db, COLL_STUDENTS), (s) => {
+        unsubs.push(onSnapshot(collection(db, COLL_STUDENTS), s => {
           clearTimeout(fallbackTimer);
           const list = s.docs.map(d => ({ ...d.data(), id: d.id }));
           list.sort((a, b) => a.roll.localeCompare(b.roll));
           setStudents(list);
           setLoading(false);
-        }, (e) => {
+        }, e => {
           clearTimeout(fallbackTimer);
           console.error(e);
-          setError('Could not load students from Firestore; using local demo data.');
+          setError('Could not load students; using local demo data.');
           setStudents(IT1_STUDENTS);
           setClaims({});
           setUseLocalMode(true);
           setLoading(false);
         }));
 
-        unsubs.push(onSnapshot(collection(db, COLL_CLAIMS), (s) => {
+        unsubs.push(onSnapshot(collection(db, COLL_CLAIMS), s => {
           clearTimeout(fallbackTimer);
           const map = {};
           s.docs.forEach(d => { map[d.id] = d.data(); });
           setClaims(map);
-        }, (e) => {
+        }, e => {
           clearTimeout(fallbackTimer);
           console.error(e);
-          setError('Could not load claims from Firestore; using local demo data.');
-          setStudents(IT1_STUDENTS);
-          setClaims({});
           setUseLocalMode(true);
           setLoading(false);
         }));
 
-        unsubs.push(onSnapshot(collection(db, COLL_WALL), (s) => {
+        unsubs.push(onSnapshot(collection(db, COLL_WALL), s => {
           setWallPosts(
             s.docs.map(d => ({ id: d.id, ...d.data() }))
               .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
           );
         }));
 
-        unsubs.push(onSnapshot(collection(db, COLL_TESTIMONIALS), (s) => {
+        unsubs.push(onSnapshot(collection(db, COLL_TESTIMONIALS), s => {
           setTestimonials(
             s.docs.map(d => ({ id: d.id, ...d.data() }))
               .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
           );
         }));
 
-        unsubs.push(onSnapshot(collection(db, COLL_MEDIA), (s) => {
+        unsubs.push(onSnapshot(collection(db, COLL_MEDIA), s => {
           const wallet = {};
           s.docs.forEach(d => {
             const { studentId, ...data } = d.data();
@@ -141,10 +136,7 @@ export function YearbookProvider({ children }) {
     }
 
     init();
-    return () => {
-      clearTimeout(fallbackTimer);
-      unsubs.forEach(u => u());
-    };
+    return () => { clearTimeout(fallbackTimer); unsubs.forEach(u => u()); };
   }, []);
 
   const updateStudent = useCallback(async (id, updates) => {
@@ -152,18 +144,39 @@ export function YearbookProvider({ children }) {
     await updateDoc(doc(db, COLL_STUDENTS, id), { ...rest, updatedAt: serverTimestamp() });
   }, []);
 
-  // ✅ Cloudinary upload — replace YOUR_CLOUD_NAME above
-  const uploadMedia = useCallback(async (studentId, dataUrl, caption) => {
+  /* ── uploadMedia with client-side compression ─────────── */
+  const uploadMedia = useCallback(async (studentId, dataUrl, caption, onProgress) => {
     if (useLocalMode) {
-      throw new Error('Uploads are disabled in demo mode. Connect to Firestore to enable permanent storage.');
+      throw new Error('Uploads disabled in demo mode. Connect Firestore to enable.');
     }
     try {
-      // Convert base64 → blob
-      const blob = await (await fetch(dataUrl)).blob();
+      /* ── 1. Measure original size ── */
+      const originalBlob  = await (await fetch(dataUrl)).blob();
+      const originalBytes = originalBlob.size;
 
+      onProgress?.({ stage: 'compressing', originalBytes });
+
+      /* ── 2. Compress via canvas ── */
+      const compressedBlob  = await compressDataUrl(dataUrl, {
+        maxWidth:  1600,
+        maxHeight: 1600,
+        quality:   0.82,
+        maxSizeKB: 800,
+      });
+      const compressedBytes = compressedBlob.size;
+      const savedPct        = Math.round((1 - compressedBytes / originalBytes) * 100);
+
+      console.log(
+        `[compressImage] ${formatBytes(originalBytes)} → ${formatBytes(compressedBytes)} ` +
+        `(saved ${savedPct > 0 ? savedPct : 0}%)`
+      );
+
+      onProgress?.({ stage: 'uploading', originalBytes, compressedBytes, savedPct });
+
+      /* ── 3. Upload compressed blob to Cloudinary ── */
       const formData = new FormData();
-      formData.append('file', blob);
-      formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+      formData.append('file',           compressedBlob);
+      formData.append('upload_preset',  CLOUDINARY_UPLOAD_PRESET);
 
       const res = await fetch(
         `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
@@ -172,22 +185,29 @@ export function YearbookProvider({ children }) {
 
       if (!res.ok) throw new Error(`Cloudinary responded with ${res.status}`);
 
-      const data = await res.json();
+      const data     = await res.json();
       const imageUrl = data.secure_url;
       const publicId = data.public_id;
 
-      // Save URL to Firestore
+      onProgress?.({ stage: 'saving', imageUrl });
+
+      /* ── 4. Save to Firestore ── */
       const docRef = await addDoc(collection(db, COLL_MEDIA), {
         studentId,
-        url: imageUrl,
+        url:            imageUrl,
         publicId,
         caption,
-        uploadedAt: new Date().toISOString(),
+        uploadedAt:     new Date().toISOString(),
+        originalBytes,
+        compressedBytes,
+        savedPct:       Math.max(savedPct, 0),
       });
 
+      onProgress?.({ stage: 'done', docId: docRef.id });
       return docRef.id;
+
     } catch (e) {
-      console.error('Cloudinary upload failed:', e);
+      console.error('uploadMedia failed:', e);
       throw new Error(`Upload failed: ${e.message || 'Unknown error'}`);
     }
   }, [useLocalMode]);
@@ -205,7 +225,7 @@ export function YearbookProvider({ children }) {
   }, []);
 
   const addTimelineEvent = useCallback(async (studentId, event) => {
-    const snap = await getDoc(doc(db, COLL_STUDENTS, studentId));
+    const snap    = await getDoc(doc(db, COLL_STUDENTS, studentId));
     const current = snap.data()?.timeline || [];
     await updateDoc(doc(db, COLL_STUDENTS, studentId), {
       timeline: [...current, { id: Date.now(), ...event }],
@@ -214,7 +234,7 @@ export function YearbookProvider({ children }) {
   }, []);
 
   const removeTimelineEvent = useCallback(async (studentId, eventId) => {
-    const snap = await getDoc(doc(db, COLL_STUDENTS, studentId));
+    const snap    = await getDoc(doc(db, COLL_STUDENTS, studentId));
     const current = (snap.data()?.timeline || []).filter(e => e.id !== eventId);
     await updateDoc(doc(db, COLL_STUDENTS, studentId), { timeline: current, updatedAt: serverTimestamp() });
   }, []);
@@ -225,8 +245,7 @@ export function YearbookProvider({ children }) {
     if (claims[id]) return { ok: false, error: 'Already claimed.' };
     if (!pin || pin.length < 4) return { ok: false, error: 'PIN must be at least 4 digits.' };
     if (useLocalMode) {
-      const nextClaims = { ...claims, [id]: { pinHash: simpleHash(pin), claimedAt: Date.now() } };
-      setClaims(nextClaims);
+      setClaims(c => ({ ...c, [id]: { pinHash: simpleHash(pin), claimedAt: Date.now() } }));
       setSessionId(id);
       return { ok: true };
     }
@@ -258,37 +277,31 @@ export function YearbookProvider({ children }) {
   }, []);
 
   const unclaimedStudents = useMemo(
-    () => students.filter((s) => !claims[s.id]),
+    () => students.filter(s => !claims[s.id]),
     [students, claims]
   );
 
   const addWallPost = useCallback(async (studentId, name, message, anonymous) => {
-    if (useLocalMode) {
-      throw new Error('Posting is disabled in demo mode. Connect to Firestore for permanent messages.');
-    }
+    if (useLocalMode) throw new Error('Posting disabled in demo mode.');
     try {
       await addDoc(collection(db, COLL_WALL), {
         studentId,
-        name: anonymous ? 'Anonymous' : (name || 'Anonymous'),
+        name:      anonymous ? 'Anonymous' : (name || 'Anonymous'),
         message,
         anonymous: Boolean(anonymous),
-        color: Math.floor(Math.random() * 6),
+        color:     Math.floor(Math.random() * 6),
         createdAt: serverTimestamp(),
       });
     } catch (e) {
-      console.error('Failed to add wall post:', e);
       throw new Error(`Failed to post: ${e.message || 'Unknown error'}`);
     }
   }, [useLocalMode]);
 
   const deleteWallPost = useCallback(async (id) => {
-    if (useLocalMode) {
-      throw new Error('Deleting is disabled in demo mode.');
-    }
+    if (useLocalMode) throw new Error('Deleting disabled in demo mode.');
     try {
       await deleteDoc(doc(db, COLL_WALL, id));
     } catch (e) {
-      console.error('Failed to delete wall post:', e);
       throw new Error(`Failed to delete: ${e.message || 'Unknown error'}`);
     }
   }, [useLocalMode]);
@@ -303,8 +316,8 @@ export function YearbookProvider({ children }) {
     await deleteDoc(doc(db, COLL_TESTIMONIALS, id));
   }, []);
 
-  const loginAdmin     = useCallback((pin) => { if (pin === ADMIN_PIN) { setIsAdmin(true); return true; } return false; }, []);
-  const logoutAdmin    = useCallback(() => setIsAdmin(false), []);
+  const loginAdmin  = useCallback((pin) => { if (pin === ADMIN_PIN) { setIsAdmin(true); return true; } return false; }, []);
+  const logoutAdmin = useCallback(() => setIsAdmin(false), []);
 
   const approveStudent = useCallback(async (id, val) => {
     await updateDoc(doc(db, COLL_STUDENTS, id), { approved: val });
@@ -319,18 +332,18 @@ export function YearbookProvider({ children }) {
   }, []);
 
   const deleteAllWallPosts = useCallback(async () => {
-    if (!window.confirm('Delete ALL wall posts? Cannot be undone.')) return;
-    const postsSnap = await getDocs(collection(db, COLL_WALL));
+    if (!window.confirm('Delete ALL wall posts?')) return;
+    const snap = await getDocs(collection(db, COLL_WALL));
     const batch = writeBatch(db);
-    postsSnap.docs.forEach(d => batch.delete(d.ref));
+    snap.docs.forEach(d => batch.delete(d.ref));
     await batch.commit();
   }, []);
 
   const deleteAllTestimonials = useCallback(async () => {
-    if (!window.confirm('Delete ALL testimonials? Cannot be undone.')) return;
-    const testiSnap = await getDocs(collection(db, COLL_TESTIMONIALS));
+    if (!window.confirm('Delete ALL testimonials?')) return;
+    const snap = await getDocs(collection(db, COLL_TESTIMONIALS));
     const batch = writeBatch(db);
-    testiSnap.docs.forEach(d => batch.delete(d.ref));
+    snap.docs.forEach(d => batch.delete(d.ref));
     await batch.commit();
   }, []);
 
