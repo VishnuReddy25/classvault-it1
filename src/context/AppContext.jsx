@@ -10,42 +10,34 @@ const COLL_VAULTS = 'vaults';
 
 const CLOUDINARY_CLOUD_NAME    = 'dirlbqjpb';
 const CLOUDINARY_UPLOAD_PRESET = 'classvault';
+const CLOUDINARY_API_KEY       = '987864278699132';
+const CLOUDINARY_API_SECRET    = 'SjTquBPwMIBiFl9YNgtVjUf10Qw';
 
-// ⚠️ Replace with your actual Cloudinary API Key & Secret from your dashboard
-const CLOUDINARY_API_KEY = '987864278699132';
-const CLOUDINARY_API_SECRET = 'SjTquBPwMIBiFl9YNgtVjUf10Qw';
-
-// Helper to delete from Cloudinary
 export async function deleteFromCloudinary(publicId) {
   if (!publicId) return;
   try {
     const timestamp = Math.floor(Date.now() / 1000);
-    const str = `public_id=${publicId}&timestamp=${timestamp}${CLOUDINARY_API_SECRET}`;
-    
-    // Generate SHA-1 signature (Cloudinary requirement)
-    const buffer = new TextEncoder().encode(str);
+    const str       = `public_id=${publicId}&timestamp=${timestamp}${CLOUDINARY_API_SECRET}`;
+    const buffer    = new TextEncoder().encode(str);
     const hashBuffer = await crypto.subtle.digest('SHA-1', buffer);
-    const signature = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-
+    const signature  = Array.from(new Uint8Array(hashBuffer))
+      .map(b => b.toString(16).padStart(2, '0')).join('');
     const fd = new FormData();
     fd.append('public_id', publicId);
-    fd.append('timestamp', timestamp);
-    fd.append('api_key', CLOUDINARY_API_KEY);
-    fd.append('signature', signature);
-
-    await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/destroy`, { method: 'POST', body: fd });
+    fd.append('timestamp',  timestamp);
+    fd.append('api_key',    CLOUDINARY_API_KEY);
+    fd.append('signature',  signature);
+    await fetch(
+      `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/destroy`,
+      { method: 'POST', body: fd }
+    );
   } catch (err) { console.error('Cloudinary delete failed:', err); }
 }
 
 export async function uploadToCloudinary(file) {
-  let uploadFile = file;
-  try {
-    const compress = (await import('browser-image-compression')).default;
-    uploadFile = await compress(file, { maxSizeMB: 0.7, maxWidthOrHeight: 1920, useWebWorker: true });
-  } catch {}
   const formData = new FormData();
-  formData.append('file', uploadFile);
-  formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+  formData.append('file',           file);
+  formData.append('upload_preset',  CLOUDINARY_UPLOAD_PRESET);
   const res = await fetch(
     `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
     { method: 'POST', body: formData }
@@ -56,8 +48,8 @@ export async function uploadToCloudinary(file) {
 }
 
 export function AppProvider({ children }) {
-  const [vaults,        setVaults]        = useState([]);
-  const [activeVaultId, setActiveVaultId] = useState(null);
+  const [vaults,         setVaults]         = useState([]);
+  const [activeVaultId,  setActiveVaultId]  = useState(null);
 
   useEffect(() => {
     const unsub = onSnapshot(
@@ -73,6 +65,8 @@ export function AppProvider({ children }) {
   }, []);
 
   const activeVault = vaults.find(v => v.id === activeVaultId) || null;
+
+  /* enterVault — called AFTER password verified in Dashboard */
   const enterVault  = useCallback((id) => setActiveVaultId(id), []);
   const exitVault   = useCallback(() => setActiveVaultId(null), []);
 
@@ -84,7 +78,6 @@ export function AppProvider({ children }) {
     } catch (err) { console.error('createVault:', err); }
   }, []);
 
-  // ── Delete entire vault — only creator can do this ────────────────────
   const deleteVault = useCallback(async (vaultId) => {
     if (!window.confirm('Delete this vault and all its memories? This cannot be undone.')) return;
     try {
@@ -103,16 +96,11 @@ export function AppProvider({ children }) {
     } catch (err) { console.error('addMemory:', err); }
   }, [vaults]);
 
-  // ── Delete single memory — only uploader can do this ─────────────────
-  // Note: Cloudinary file is orphaned (unsigned preset limitation)
-  // but the image is removed from the app immediately
   const deleteMemory = useCallback(async (vaultId, memoryId) => {
     const vault = vaults.find(v => v.id === vaultId);
     if (!vault) return;
     const memToDelete = (vault.memories || []).find(m => m.id === memoryId);
-    if (memToDelete?.publicId) {
-      deleteFromCloudinary(memToDelete.publicId);
-    }
+    if (memToDelete?.publicId) deleteFromCloudinary(memToDelete.publicId);
     const updated = (vault.memories || []).filter(m => m.id !== memoryId);
     try {
       await updateDoc(doc(db, COLL_VAULTS, vaultId), { memories: updated });
